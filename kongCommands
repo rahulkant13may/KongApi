@@ -1,0 +1,110 @@
+curl -i -X POST \
+ --url http://localhost:8001/services/ \
+ --data 'name=testApi' \
+ --data 'url=http://localhost:5055'
+
+
+Register the route /api/v1/test1 to the service with the following query
+curl -i -X POST \
+ --url http://localhost:8001/services/testApi/routes \
+ --data 'hosts[]=localhost' \
+ --data 'paths[]=/api/v1/test1' \
+ --data 'strip_path=false' \
+ --data 'methods[]=GET'
+
+
+ curl -i -X GET \
+ --url http://localhost:8000/api/v1/test1 \
+ --header 'Host: localhost'
+
+
+
+ =================================================================
+
+
+ curl -i -X POST \
+ --url http://localhost:8001/services/ \
+ --data 'name=postApi' \
+ --data 'url=https://jsonplaceholder.typicode.com'
+
+
+ curl -i -X POST \
+ --url http://localhost:8001/services/postApi/routes \
+ --data 'hosts[]=jsonplaceholder' \
+ --data 'paths[]=/posts/1' \
+ --data 'strip_path=false' \
+ --data 'methods[]=GET'
+
+
+  curl -i -X POST \
+ --url http://localhost:8001/services/postApi/routes \
+ --data 'hosts[]=jsonplaceholder' \
+ --data 'paths[]=/posts/2' \
+ --data 'strip_path=false' \
+ --data 'methods[]=GET'
+
+
+  curl -i -X GET \
+ --url http://localhost:8000/posts/1 \
+ --header 'Host: jsonplaceholder'
+
+
+
+  curl -i -X GET \
+ --url http://localhost:8000/posts/2 \
+ --header 'Host: jsonplaceholder'
+-----------------------------------------------------------------------------------------
+
+ Now adding consumers to consume the API
+
+ curl -X POST http://localhost:8001/consumers --data "username=consumer1" --data "custom_id=101"
+
+ curl -X POST http://localhost:8001/consumers --data "username=consumer2" --data "custom_id=102"
+
+-----------------------------------------------------------------------------------------
+
+Adding key-auth plugin to the service
+
+ curl -X POST http://localhost:8001/services/postApi/plugins \
+ --data "name=key-auth"
+
+
+ Our consumers needs“apikey” to access the service. Lets set apikey to each consumer we registered with the following query.
+
+curl -X POST http://localhost:8001/consumers/consumer1/key-auth --data ""
+
+ {"key":"PqhIuAsIYIrmY4Hd55LffBOMHI4knRo2","created_at":1558604206,"consumer":{"id":"c879465a-bbea-49cf-85db-d6ef2d830821"},"id":"93062820-804e-4711-9b78-050a8dbe3e11"}%
+
+ ----------------------------------------------------------------------------------------
+
+ curl -i -X GET --url http://localhost:8000/posts/1 --header 'Host: jsonplaceholder' --header 'apikey: PqhIuAsIYIrmY4Hd55LffBOMHI4knRo2'
+ ----------------------------------------------------------------------------------------
+
+ delete the key-auth plugin of the service and lets add on the route to test
+
+
+d7b56667-e9a6-4b60-a3dc-9a6b7a287252  key-auth plugin id
+
+curl -i -X DELETE http://localhost:8001/plugins/d7b56667-e9a6-4b60-a3dc-9a6b7a287252
+
+
+-----------------------------------------------------------------------------------------
+
+set key-auth plugin to the route /posts/1 with the following query.
+ 
+ id = 221ca4c9-5076-4815-bed4-4990102047fb
+
+ curl -X POST http://localhost:8001/routes/221ca4c9-5076-4815-bed4-4990102047fb/plugins --data "name=key-auth"
+
+ Respone:
+
+ {"created_at":1558606422,"config":{"key_names":["apikey"],"run_on_preflight":true,"anonymous":null,"hide_credentials":false,"key_in_body":false},"id":"7555fa78-dbf2-4f43-957f-d2f688b7818a","service":null,"name":"key-auth","protocols":["http","https"],"enabled":true,"run_on":"first","consumer":null,"route":{"id":"221ca4c9-5076-4815-bed4-4990102047fb"},"tags":null}%
+
+ --------------------------------------------------------------------------------------
+accessing post1 with consumer key 1
+
+  curl -i -X GET --url http://localhost:8000/posts/1 --header 'Host: jsonplaceholder' --header 'apikey: PqhIuAsIYIrmY4Hd55LffBOMHI4knRo2'
+
+  PqhIuAsIYIrmY4Hd55LffBOMHI4knRo2  =  consumer1 apikey
+
+----------------------------------------------------------------------------------------
